@@ -1,0 +1,141 @@
+from xgboost import XGBClassifier
+
+# Instantiate the  XGBoost model
+xgb = XGBClassifier(learning_rate=0.0001)
+
+# Fit the model on train
+
+xgb.fit(X_train,y_train)
+
+y_pred = xgb.predict(X_test)
+
+# Store the different evaluation values.
+
+f1 = f1_score(y_test, xgb.predict(X_test))
+precison = precision_score(y_test, xgb.predict(X_test))
+recall = recall_score(y_test, xgb.predict(X_test))
+roc_auc = roc_auc_score(y_test, xgb.predict(X_test))
+print(confusion_matrix(y_test,y_pred))
+print(classification_report(y_test,y_pred))
+
+
+# Plot the auc-roc curve
+
+score = roc_auc_score(y_test,y_pred)
+y_pred_proba = xgb.predict_proba(X_test)[:,1]
+fpr, tpr, _ = metrics.roc_curve(y_test,  y_pred_proba)
+auc = metrics.roc_auc_score(y_test, y_pred_proba)
+plt.plot(fpr,tpr,label="XG Boost, auc="+str(auc))
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.legend(loc=4)
+plt.show()
+
+#Task 1 - Load the data
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
+# Code starts here
+df=pd.read_csv(filepath_or_buffer=path, compression='zip' , low_memory = False)
+y=df['loan_status']
+X=df.drop('loan_status',axis=1)
+X_train,X_test,y_train,y_test = train_test_split(X,y, test_size = 0.25 , random_state = 4)
+
+# Code ends here
+
+#Task 2 - Data cleaning
+# Code starts  here
+col = df.isnull().sum()
+tr=0.25*len(df)
+print(tr)
+col_drop = sorted(list(col[col > tr].index))
+print(col_drop)
+add_col_drop=df.nunique()
+for i in list(add_col_drop[add_col_drop==1].index):
+    col_drop.append(i)
+print(col_drop)
+X_train.drop(col_drop,axis=1,inplace=True)
+X_test.drop(col_drop,axis=1,inplace=True)
+# Code ends here
+
+#Task 3 - Multiclass to binary class
+import numpy as np
+
+
+# Code starts here
+y_train=y_train.replace('Fully Paid',0)
+y_train=y_train.replace('Current',0)
+y_train=y_train.replace('Late (16-30 days)',1)
+y_train=y_train.replace('In Grace Period',1)
+y_train=y_train.replace('Late (31-120 days)',1)
+y_train=y_train.replace('Charged Off',1)
+y_train.fillna(1,inplace=True)
+
+y_test=y_test.replace('Fully Paid',0)
+y_test=y_test.replace('Current',0)
+y_test=y_test.replace('Late (16-30 days)',1)
+y_test=y_test.replace('In Grace Period',1)
+y_test=y_test.replace('Late (31-120 days)',1)
+y_test=y_test.replace('Charged Off',1)
+y_test.fillna(1,inplace=True)
+
+
+print(y_train.unique())
+# Code ends here
+
+#Task 4 - Missing values and Encoding categorical variables
+from sklearn.preprocessing import LabelEncoder
+
+
+# categorical and numerical variables
+cat = X_train.select_dtypes(include = 'O').columns.tolist()
+num = X_train.select_dtypes(exclude = 'O').columns.tolist()
+
+# Code starts here
+print(num)
+print(cat)
+print(X_train.isnull().sum())
+for i in num:
+    avg_train=X_train[i].mean()
+    avg_test=X_test[i].mean()
+    print(i)
+    X_train[i]=X_train[i].fillna(avg_train)
+    X_test[i]=X_test[i].fillna(avg_test)
+
+print('++'*20)
+for i in cat:
+    mode_train=X_train[i].mode()
+    mode_test=X_test[i].mode()
+    X_train[i]=X_train[i].fillna(mode_train[0])
+    X_test[i]=X_test[i].fillna(mode_test[0])
+    le=LabelEncoder()
+    X_train[i]=le.fit_transform(X_train[i])
+    X_test[i]=le.fit_transform(X_test[i])
+
+print(X_train.isnull().sum())
+# Code ends here
+
+#Task 5 - Random Forest
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import f1_score,precision_score,recall_score,roc_auc_score,confusion_matrix,classification_report
+from sklearn import metrics
+import matplotlib.pyplot as plt
+
+# Code starts here
+rf=RandomForestClassifier(random_state =42,max_depth=2,min_samples_leaf=5000)
+rf.fit(X_train,y_train)
+y_pred=rf.predict(X_test)
+f1 = f1_score(y_test,y_pred)
+precision = precision_score(y_test,y_pred)
+recall = recall_score(y_test,y_pred)
+roc_auc = roc_auc_score(y_test,y_pred)
+
+y_pred_proba = rf.predict_proba(X_test)[:,1]
+auc = roc_auc_score(y_test,y_pred_proba)
+
+fpr, tpr, thresholds = metrics.roc_curve(y_test,y_pred)
+# print(fpr,tpr)
+plt.plot(fpr,tpr,label="Random Forest model, auc="+str(auc))
+
+# Code ends here
+
